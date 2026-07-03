@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Edit Player Name</title>
+  <link rel="stylesheet" href="../../style/theme.css" />
+</head>
+<body>
+  <header class="app-header">
+    <a class="back-link" href="stats.html" aria-label="Back">&larr;</a>
+    <h1>Edit Player</h1>
+    <span style="width:1.6rem"></span>
+  </header>
+
+  <main class="app-main">
+    <form id="entity-form" class="entity-form">
+      <div class="form-group">
+        <label for="field-name">Name</label>
+        <input type="text" id="field-name" name="name" required />
+      </div>
+
+      <div class="form-group">
+        <label>XP to level up</label>
+        <div id="xp-thresholds" class="dynamic-list"></div>
+        <button type="button" id="add-xp-threshold" class="btn btn-ghost btn-sm">+ Add level</button>
+      </div>
+
+      <div class="form-group">
+        <label>Rank gained at level</label>
+        <div id="rank-thresholds" class="dynamic-list"></div>
+        <button type="button" id="add-rank-threshold" class="btn btn-ghost btn-sm">+ Add rank</button>
+      </div>
+
+      <div class="form-actions">
+        <a class="btn btn-ghost" href="stats.html">Cancel</a>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+    <p id="form-error" class="form-error"></p>
+  </main>
+
+  <script type="module" src="edit-name.js"></script>
+</body>
+</html>

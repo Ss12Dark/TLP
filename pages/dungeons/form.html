@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Dungeon</title>
+  <link rel="stylesheet" href="../../style/theme.css" />
+</head>
+<body>
+  <header class="app-header">
+    <a class="back-link" href="list.html" aria-label="Back">&larr;</a>
+    <h1 id="form-heading">Dungeon</h1>
+    <span style="width:1.6rem"></span>
+  </header>
+
+  <main class="app-main">
+    <form id="entity-form" class="entity-form">
+      <div class="form-group">
+        <label for="field-name">Name</label>
+        <input type="text" id="field-name" name="name" required />
+      </div>
+
+      <div class="form-group">
+        <label>Monsters</label>
+        <div id="monster-checkboxes" class="checkbox-list">
+          <p class="loading-state">Loading…</p>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Quests</label>
+        <div id="quest-checkboxes" class="checkbox-list">
+          <p class="loading-state">Loading…</p>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a class="btn btn-ghost" href="list.html">Cancel</a>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+    <p id="form-error" class="form-error"></p>
+  </main>
+
+  <script type="module" src="dungeon-form.js"></script>
+</body>
+</html>

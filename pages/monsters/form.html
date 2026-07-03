@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Monster</title>
+  <link rel="stylesheet" href="../../style/theme.css" />
+</head>
+<body>
+  <header class="app-header">
+    <a class="back-link" href="list.html" aria-label="Back">&larr;</a>
+    <h1 id="form-heading">Monster</h1>
+    <span style="width:1.6rem"></span>
+  </header>
+
+  <main class="app-main">
+    <form id="entity-form" class="entity-form"></form>
+    <p id="form-error" class="form-error"></p>
+  </main>
+
+  <script type="module">
+    import { initEntityFormPage } from '../shared/entity-form.js';
+    import { monsterConfig } from '../shared/entityConfigs.js';
+    initEntityFormPage(monsterConfig);
+  </script>
+</body>
+</html>

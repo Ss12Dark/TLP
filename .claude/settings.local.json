@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --check pages/shared/entity-list.js)",
+      "Bash(node --check pages/shared/entity-form.js)",
+      "Bash(node --check pages/shared/entityConfigs.js)",
+      "Bash(node --check pages/dungeons/dungeon-form.js)",
+      "Bash(node --check services/repository.js)",
+      "Bash(node --input-type=module --check)"
+    ]
+  }
+}
