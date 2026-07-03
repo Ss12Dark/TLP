@@ -261,6 +261,21 @@ a {
   color: var(--text);
 }
 
+.badge-button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.badge-button:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.badge-button:active {
+  transform: scale(0.95);
+}
+
 .badge-row {
   display: flex;
   flex-wrap: wrap;

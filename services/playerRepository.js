@@ -91,6 +91,18 @@ export async function setCurrentDungeonId(dungeonId) {
 }
 
 /**
+ * Subtracts a positive amount from the player's gold/energy. The result can
+ * go negative (e.g. an energy debt) — no clamping is applied.
+ */
+export async function spendGold(amount) {
+  await setDoc(PLAYER_DOC, { gold: increment(-Math.abs(amount)) }, { merge: true });
+}
+
+export async function spendEnergy(amount) {
+  await setDoc(PLAYER_DOC, { energy: increment(-Math.abs(amount)) }, { merge: true });
+}
+
+/**
  * Applies the rewards for slaying a monster (gold/xp/energy) to the player
  * doc, and bumps the relevant PlayerStatistics counters + history entry on
  * the separate statistics doc.

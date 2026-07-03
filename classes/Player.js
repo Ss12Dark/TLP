@@ -73,7 +73,7 @@ export class Player {
   }
 
   set gold(value) {
-    this.#gold = Math.max(0, Math.trunc(value));
+    this.#gold = Math.trunc(value);
   }
 
   get energy() {
@@ -81,7 +81,7 @@ export class Player {
   }
 
   set energy(value) {
-    this.#energy = Math.max(0, Math.trunc(value));
+    this.#energy = Math.trunc(value);
   }
 
   toJSON() {

@@ -6,6 +6,8 @@ import {
   setCurrentDungeonId,
   recordMonsterSlain,
   recordQuestCompleted,
+  spendGold,
+  spendEnergy,
 } from '../../services/playerRepository.js';
 
 const dungeonRepo = new Repository('dungeons');
@@ -98,8 +100,8 @@ function renderPlayer(player) {
       </div>
       <div class="badge-row player-stats">
         <span class="badge">⭐ ${player.xp}</span>
-        <span class="badge">🪙 ${player.gold}</span>
-        <span class="badge">⚡ ${player.energy}</span>
+        <button type="button" class="badge badge-button" data-field="gold">🪙 ${player.gold}</button>
+        <button type="button" class="badge badge-button" data-field="energy">⚡ ${player.energy}</button>
       </div>
     </section>
   `;
@@ -209,6 +211,75 @@ function render() {
   if (spontaneousButton) {
     spontaneousButton.addEventListener('click', onSpontaneousMonsterClick);
   }
+
+  const playerStats = root.querySelector('.player-stats');
+  if (playerStats) {
+    playerStats.addEventListener('click', onStatClick);
+  }
+}
+
+function showAmountModal(title) {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'dialog-backdrop';
+    backdrop.innerHTML = `
+      <div class="dialog-box">
+        <h3>${escapeHtml(title)}</h3>
+        <form id="amount-form" class="entity-form">
+          <div class="form-group">
+            <label for="amount-input">Amount to subtract</label>
+            <input type="number" id="amount-input" min="1" step="1" required />
+          </div>
+          <p class="form-error" id="amount-error"></p>
+          <div class="dialog-actions">
+            <button type="button" class="btn btn-ghost" data-action="cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Subtract</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    const form = backdrop.querySelector('#amount-form');
+
+    backdrop.addEventListener('click', (event) => {
+      if (event.target === backdrop || event.target.dataset.action === 'cancel') {
+        backdrop.remove();
+        resolve(null);
+      }
+    });
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const amount = Number(backdrop.querySelector('#amount-input').value);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        backdrop.querySelector('#amount-error').textContent = 'Enter a positive number.';
+        return;
+      }
+      backdrop.remove();
+      resolve(amount);
+    });
+
+    document.body.appendChild(backdrop);
+    backdrop.querySelector('#amount-input').focus();
+  });
+}
+
+async function onStatClick(event) {
+  const button = event.target.closest('.badge-button');
+  if (!button) return;
+
+  const field = button.dataset.field;
+  const amount = await showAmountModal(field === 'gold' ? '🪙 Spend Gold' : '⚡ Spend Energy');
+  if (amount === null) return;
+
+  if (field === 'gold') {
+    await spendGold(amount);
+  } else {
+    await spendEnergy(amount);
+  }
+
+  state.player = await getPlayer();
+  render();
 }
 
 function showSpontaneousMonsterModal() {
