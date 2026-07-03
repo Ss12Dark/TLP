@@ -1,19 +1,20 @@
 /* ── Dungeon / old leather theme ─────────────────────────────── */
 :root {
-  --bg: #17110c;
-  --surface: #241a12;
-  --surface-alt: #2f2216;
+  --bg: #000000;
+  --surface: #000000ce;
+  --surface-alt: #000000;
   --border: #4a3623;
   --border-light: #6b4e2f;
   --text: #e9dcc3;
   --text-muted: #ab9877;
   --accent: #c99a4b;
   --accent-dark: #8a6a2e;
+  --accent-green: #73ff00;
   --danger: #7a2e2a;
   --danger-light: #a4423b;
   --success: #52672f;
   --elite: #9b2226;
-  --shadow: rgba(0, 0, 0, 0.55);
+  --shadow: rgba(255, 238, 0, 0.55);
   --radius: 10px;
   --font-heading: Georgia, 'Times New Roman', serif;
   --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -31,7 +32,7 @@ body {
 
 body {
   min-height: 100vh;
-  background: radial-gradient(ellipse at top, #241a12 0%, #17110c 65%);
+  background-image: url('../imgs/dngb.png');
   color: var(--text);
   font-family: var(--font-body);
   line-height: 1.4;
@@ -226,6 +227,7 @@ a {
 
 .entity-card .card-title {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
@@ -531,11 +533,14 @@ a {
 .monster-card:disabled,
 .monster-card.is-slain {
   opacity: 0.5;
+  border-color: var(--accent-green);
   cursor: default;
 }
 
 .monster-icon {
-  font-size: 1.8rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  object-fit: contain;
 }
 
 .monster-name {
@@ -585,6 +590,7 @@ a {
 .quest-row:disabled,
 .quest-row.is-complete {
   opacity: 0.5;
+  border-color: var(--accent-green);
   cursor: default;
 }
 
@@ -617,11 +623,24 @@ a {
   padding: 1.25rem;
   max-width: 320px;
   width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 8px 24px var(--shadow);
+}
+
+.dialog-box-wide {
+  max-width: 420px;
 }
 
 .dialog-box p {
   margin: 0 0 1rem;
+}
+
+.dialog-box .entity-form {
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
 }
 
 .dialog-actions {

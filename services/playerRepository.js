@@ -65,6 +65,17 @@ export async function savePlayerName(name) {
 }
 
 /**
+ * Resets the player and player-statistics docs back to their class defaults.
+ * Leaves monsters/quests/dungeons (and their per-dungeon progress) untouched.
+ */
+export async function resetPlayer() {
+  await Promise.all([
+    setDoc(PLAYER_DOC, new Player().toJSON()),
+    setDoc(STATISTICS_DOC, new PlayerStatistics().toJSON()),
+  ]);
+}
+
+/**
  * Which dungeon the game page is currently showing. Per-dungeon progress
  * (which monsters/quests are done) lives on the dungeon doc itself, not
  * here, so it survives the dungeon being picked again later.

@@ -1,4 +1,5 @@
-import { getPlayer, getPlayerStatistics } from '../../services/playerRepository.js';
+import { getPlayer, getPlayerStatistics, resetPlayer } from '../../services/playerRepository.js';
+import { showConfirmDialog } from '../shared/confirmDialog.js';
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({
@@ -63,7 +64,23 @@ async function render() {
       <h3>History</h3>
       ${renderHistory(statistics.history)}
     </section>
+
+    <section class="entity-card">
+      <button type="button" id="reset-player-btn" class="btn btn-danger btn-block">⚠ Reset Player Data</button>
+    </section>
   `;
+
+  document.getElementById('reset-player-btn').addEventListener('click', onResetClick);
+}
+
+async function onResetClick() {
+  const confirmed = await showConfirmDialog(
+    'Reset all player data and statistics? This cannot be undone. Monsters, quests, and dungeons will not be affected.',
+    { confirmLabel: 'Reset' }
+  );
+  if (!confirmed) return;
+  await resetPlayer();
+  await render();
 }
 
 render();

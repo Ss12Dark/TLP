@@ -72,7 +72,15 @@ async function enterDungeon(dungeon) {
 
 async function startNewDungeon(excludeId = null) {
   const dungeons = await dungeonRepo.getAll();
-  const dungeon = pickRandomDungeon(dungeons, excludeId);
+  let dungeon = pickRandomDungeon(dungeons, excludeId);
+
+  if (dungeon && isDungeonCleared(dungeon)) {
+    // No fresh dungeon exists to switch to (e.g. only one dungeon is set up) —
+    // respawn this one's monsters/quests instead of leaving it stuck cleared.
+    await dungeonRepo.update(dungeon.id, { slainMonsterIds: [], completedQuestIds: [] });
+    dungeon = { ...dungeon, slainMonsterIds: [], completedQuestIds: [] };
+  }
+
   await enterDungeon(dungeon);
   await setCurrentDungeonId(dungeon?.id ?? null);
 }
@@ -103,7 +111,7 @@ function renderDayBanner() {
 }
 
 function renderMonsterCard(monster, isSlain) {
-  const icon = monster.is_elite ? '👹' : '💀';
+  const iconSrc = monster.is_elite ? '../../imgs/m2.png' : '../../imgs/m1.png';
   return `
     <button
       type="button"
@@ -111,7 +119,7 @@ function renderMonsterCard(monster, isSlain) {
       data-id="${monster.id}"
       ${isSlain ? 'disabled' : ''}
     >
-      <span class="monster-icon">${icon}</span>
+      <img class="monster-icon" src="${iconSrc}" alt="${monster.is_elite ? 'Elite monster' : 'Monster'}" />
       <span class="monster-name">${escapeHtml(monster.name)}</span>
       ${monster.is_elite ? '<span class="badge badge-elite">Elite</span>' : ''}
       <div class="badge-row">
@@ -161,6 +169,7 @@ function render() {
       <section class="entity-card dungeon-card">
         <div class="card-title">
           <h3>🏰 ${escapeHtml(dungeon.name)}</h3>
+          <button type="button" id="spontaneous-monster-btn" class="btn btn-sm">🎲 Spontaneous Monster</button>
         </div>
         <div id="monster-grid" class="card-grid">
           ${
@@ -195,6 +204,114 @@ function render() {
   if (questList) {
     questList.addEventListener('click', onQuestClick);
   }
+
+  const spontaneousButton = document.getElementById('spontaneous-monster-btn');
+  if (spontaneousButton) {
+    spontaneousButton.addEventListener('click', onSpontaneousMonsterClick);
+  }
+}
+
+function showSpontaneousMonsterModal() {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'dialog-backdrop';
+    backdrop.innerHTML = `
+      <div class="dialog-box dialog-box-wide">
+        <h3>🎲 Spontaneous Monster</h3>
+        <form id="spontaneous-monster-form" class="entity-form">
+          <div class="form-group">
+            <label for="sm-name">Name</label>
+            <input type="text" id="sm-name" required />
+          </div>
+          <div class="form-group">
+            <label for="sm-description">Description</label>
+            <textarea id="sm-description"></textarea>
+          </div>
+          <div class="form-group checkbox-row">
+            <input type="checkbox" id="sm-elite" />
+            <label for="sm-elite">Elite</label>
+          </div>
+          <div class="form-group">
+            <label for="sm-xp">XP reward</label>
+            <input type="number" id="sm-xp" step="any" value="0" />
+          </div>
+          <div class="form-group">
+            <label for="sm-gold">Gold reward</label>
+            <input type="number" id="sm-gold" step="1" value="0" />
+          </div>
+          <div class="form-group">
+            <label for="sm-energy">Energy reward</label>
+            <input type="number" id="sm-energy" step="1" value="0" />
+          </div>
+          <p class="form-error" id="sm-error"></p>
+          <div class="dialog-actions">
+            <button type="button" class="btn btn-ghost" data-action="cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Slay!</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    const form = backdrop.querySelector('#spontaneous-monster-form');
+
+    backdrop.addEventListener('click', (event) => {
+      if (event.target === backdrop || event.target.dataset.action === 'cancel') {
+        backdrop.remove();
+        resolve(null);
+      }
+    });
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const name = backdrop.querySelector('#sm-name').value.trim();
+      if (!name) {
+        backdrop.querySelector('#sm-error').textContent = 'Name is required.';
+        return;
+      }
+      backdrop.remove();
+      resolve({
+        name,
+        description: backdrop.querySelector('#sm-description').value.trim(),
+        is_elite: backdrop.querySelector('#sm-elite').checked,
+        xp_to_give_when_defeated: Number(backdrop.querySelector('#sm-xp').value) || 0,
+        gold_to_give_when_defeated: Math.trunc(Number(backdrop.querySelector('#sm-gold').value)) || 0,
+        energy_to_give_when_defeated: Math.trunc(Number(backdrop.querySelector('#sm-energy').value)) || 0,
+      });
+    });
+
+    document.body.appendChild(backdrop);
+    backdrop.querySelector('#sm-name').focus();
+  });
+}
+
+async function onSpontaneousMonsterClick() {
+  if (!state.dungeon) return;
+
+  const data = await showSpontaneousMonsterModal();
+  if (!data) return;
+
+  const monsterId = await monsterRepo.add(data);
+  const monster = { id: monsterId, ...data };
+
+  await Promise.all([
+    dungeonRepo.update(state.dungeon.id, {
+      monsterIds: arrayUnion(monsterId),
+      slainMonsterIds: arrayUnion(monsterId),
+    }),
+    recordMonsterSlain(monster),
+  ]);
+
+  state.monsters.push(monster);
+  state.slainMonsterIds.add(monsterId);
+  state.dungeon.monsterIds = [...(state.dungeon.monsterIds ?? []), monsterId];
+  state.player = await getPlayer();
+
+  const allSlain = state.monsters.every((m) => state.slainMonsterIds.has(m.id));
+  if (allSlain) {
+    await startNewDungeon(state.dungeon.id);
+  }
+
+  render();
 }
 
 async function onMonsterClick(event) {

@@ -1,4 +1,5 @@
 import { Repository } from '../../services/repository.js';
+import { showConfirmDialog } from './confirmDialog.js';
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({
@@ -8,32 +9,6 @@ function escapeHtml(value) {
     '"': '&quot;',
     "'": '&#39;',
   }[c]));
-}
-
-function showConfirmDialog(message) {
-  return new Promise((resolve) => {
-    const backdrop = document.createElement('div');
-    backdrop.className = 'dialog-backdrop';
-    backdrop.innerHTML = `
-      <div class="dialog-box">
-        <p>${escapeHtml(message)}</p>
-        <div class="dialog-actions">
-          <button type="button" class="btn btn-ghost" data-action="cancel">Cancel</button>
-          <button type="button" class="btn btn-danger" data-action="confirm">Delete</button>
-        </div>
-      </div>
-    `;
-    backdrop.addEventListener('click', (event) => {
-      if (event.target === backdrop || event.target.dataset.action === 'cancel') {
-        backdrop.remove();
-        resolve(false);
-      } else if (event.target.dataset.action === 'confirm') {
-        backdrop.remove();
-        resolve(true);
-      }
-    });
-    document.body.appendChild(backdrop);
-  });
 }
 
 /**
