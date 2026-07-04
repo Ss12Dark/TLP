@@ -1,5 +1,8 @@
 import { getPlayer, getPlayerStatistics, resetPlayer } from '../../services/playerRepository.js';
 import { showConfirmDialog } from '../shared/confirmDialog.js';
+import { requireActivePlayerId } from '../../services/playerSession.js';
+
+const playerId = requireActivePlayerId('../login/index.html');
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({
@@ -33,7 +36,7 @@ function renderHistory(history) {
 
 async function render() {
   const main = document.getElementById('player-main');
-  const [player, statistics] = await Promise.all([getPlayer(), getPlayerStatistics()]);
+  const [player, statistics] = await Promise.all([getPlayer(playerId), getPlayerStatistics(playerId)]);
 
   main.innerHTML = `
     <section class="entity-card">
@@ -79,8 +82,10 @@ async function onResetClick() {
     { confirmLabel: 'Reset' }
   );
   if (!confirmed) return;
-  await resetPlayer();
+  await resetPlayer(playerId);
   await render();
 }
 
-render();
+if (playerId) {
+  render();
+}

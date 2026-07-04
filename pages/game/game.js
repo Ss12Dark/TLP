@@ -11,6 +11,13 @@ import {
   spendEnergy,
 } from '../../services/playerRepository.js';
 import { getEventsConfig, getFastFightConfig } from '../../services/eventsConfig.js';
+import { requireActivePlayerId } from '../../services/playerSession.js';
+import {
+  getDungeonProgress,
+  getAllDungeonProgress,
+  updateDungeonProgress,
+  resetDungeonProgress,
+} from '../../services/dungeonProgress.js';
 
 const dungeonRepo = new Repository('dungeons');
 const monsterRepo = new Repository('monsters');
@@ -27,6 +34,7 @@ const ICONS = {
 const root = document.getElementById('game-root');
 
 const state = {
+  playerId: null,
   player: null,
   dungeon: null,
   monsters: [],
@@ -46,16 +54,16 @@ function escapeHtml(value) {
   }[c]));
 }
 
-function isDungeonCleared(dungeon) {
+function isDungeonCleared(dungeon, progress) {
   const monsterIds = dungeon.monsterIds ?? [];
   if (monsterIds.length === 0) return false;
-  const slain = new Set(dungeon.slainMonsterIds ?? []);
+  const slain = new Set(progress?.slainMonsterIds ?? []);
   return monsterIds.every((id) => slain.has(id));
 }
 
-function pickRandomDungeon(dungeons, excludeId) {
+function pickRandomDungeon(dungeons, progressMap, excludeId) {
   const available = dungeons.filter((d) => d.id !== excludeId);
-  const fresh = available.filter((d) => !isDungeonCleared(d));
+  const fresh = available.filter((d) => !isDungeonCleared(d, progressMap[d.id]));
   const pool = fresh.length > 0 ? fresh : available.length > 0 ? available : dungeons;
   if (pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)];
@@ -72,10 +80,10 @@ async function loadDungeonView(dungeon) {
   };
 }
 
-async function enterDungeon(dungeon) {
+async function enterDungeon(dungeon, progress) {
   state.dungeon = dungeon;
-  state.slainMonsterIds = new Set(dungeon?.slainMonsterIds ?? []);
-  state.completedQuestIds = new Set(dungeon?.completedQuestIds ?? []);
+  state.slainMonsterIds = new Set(progress?.slainMonsterIds ?? []);
+  state.completedQuestIds = new Set(progress?.completedQuestIds ?? []);
   const view = await loadDungeonView(dungeon);
   state.monsters = view.monsters;
   state.quests = view.quests;
@@ -83,17 +91,19 @@ async function enterDungeon(dungeon) {
 
 async function startNewDungeon(excludeId = null) {
   const dungeons = await dungeonRepo.getAll();
-  let dungeon = pickRandomDungeon(dungeons, excludeId);
+  const progressMap = await getAllDungeonProgress(state.playerId);
+  const dungeon = pickRandomDungeon(dungeons, progressMap, excludeId);
+  let progress = dungeon ? progressMap[dungeon.id] : null;
 
-  if (dungeon && isDungeonCleared(dungeon)) {
+  if (dungeon && isDungeonCleared(dungeon, progress)) {
     // No fresh dungeon exists to switch to (e.g. only one dungeon is set up) —
-    // respawn this one's monsters/quests instead of leaving it stuck cleared.
-    await dungeonRepo.update(dungeon.id, { slainMonsterIds: [], completedQuestIds: [] });
-    dungeon = { ...dungeon, slainMonsterIds: [], completedQuestIds: [] };
+    // respawn this one's monsters/quests for this player instead of leaving it stuck cleared.
+    await resetDungeonProgress(state.playerId, dungeon.id);
+    progress = { slainMonsterIds: [], completedQuestIds: [] };
   }
 
-  await enterDungeon(dungeon);
-  await setCurrentDungeonId(dungeon?.id ?? null);
+  await enterDungeon(dungeon, progress);
+  await setCurrentDungeonId(state.playerId, dungeon?.id ?? null);
 }
 
 function renderPlayer(player) {
@@ -317,8 +327,8 @@ async function onFastFightClick() {
   button.disabled = true;
 
   const fastFightConfig = await getFastFightConfig();
-  const applied = await recordFastFight(fastFightConfig);
-  state.player = await getPlayer();
+  const applied = await recordFastFight(state.playerId, fastFightConfig);
+  state.player = await getPlayer(state.playerId);
 
   showEarnedPopup(applied);
   showLevelAndRankPopups(applied);
@@ -380,12 +390,12 @@ async function onStatClick(event) {
   if (amount === null) return;
 
   if (field === 'gold') {
-    await spendGold(amount);
+    await spendGold(state.playerId, amount);
   } else {
-    await spendEnergy(amount);
+    await spendEnergy(state.playerId, amount);
   }
 
-  state.player = await getPlayer();
+  state.player = await getPlayer(state.playerId);
   render();
 }
 
@@ -471,18 +481,16 @@ async function onSpontaneousMonsterClick() {
   const monsterId = await monsterRepo.add(data);
   const monster = { id: monsterId, ...data };
 
-  const [, applied] = await Promise.all([
-    dungeonRepo.update(state.dungeon.id, {
-      monsterIds: arrayUnion(monsterId),
-      slainMonsterIds: arrayUnion(monsterId),
-    }),
-    recordMonsterSlain(monster),
+  const [, , applied] = await Promise.all([
+    dungeonRepo.update(state.dungeon.id, { monsterIds: arrayUnion(monsterId) }),
+    updateDungeonProgress(state.playerId, state.dungeon.id, { slainMonsterIds: arrayUnion(monsterId) }),
+    recordMonsterSlain(state.playerId, monster),
   ]);
 
   state.monsters.push(monster);
   state.slainMonsterIds.add(monsterId);
   state.dungeon.monsterIds = [...(state.dungeon.monsterIds ?? []), monsterId];
-  state.player = await getPlayer();
+  state.player = await getPlayer(state.playerId);
 
   showEarnedPopup(applied);
   showLevelAndRankPopups(applied);
@@ -507,11 +515,11 @@ async function onMonsterClick(event) {
   button.disabled = true;
 
   const [applied] = await Promise.all([
-    recordMonsterSlain(monster),
-    dungeonRepo.update(state.dungeon.id, { slainMonsterIds: arrayUnion(monsterId) }),
+    recordMonsterSlain(state.playerId, monster),
+    updateDungeonProgress(state.playerId, state.dungeon.id, { slainMonsterIds: arrayUnion(monsterId) }),
   ]);
   state.slainMonsterIds.add(monsterId);
-  state.player = await getPlayer();
+  state.player = await getPlayer(state.playerId);
 
   showEarnedPopup(applied);
   showLevelAndRankPopups(applied);
@@ -536,11 +544,11 @@ async function onQuestClick(event) {
   button.disabled = true;
 
   const [applied] = await Promise.all([
-    recordQuestCompleted(quest),
-    dungeonRepo.update(state.dungeon.id, { completedQuestIds: arrayUnion(questId) }),
+    recordQuestCompleted(state.playerId, quest),
+    updateDungeonProgress(state.playerId, state.dungeon.id, { completedQuestIds: arrayUnion(questId) }),
   ]);
   state.completedQuestIds.add(questId);
-  state.player = await getPlayer();
+  state.player = await getPlayer(state.playerId);
 
   showEarnedPopup(applied);
   showLevelAndRankPopups(applied);
@@ -548,14 +556,18 @@ async function onQuestClick(event) {
 }
 
 async function init() {
-  state.player = await getPlayer();
+  state.playerId = requireActivePlayerId('../login/index.html');
+  if (!state.playerId) return;
+
+  state.player = await getPlayer(state.playerId);
   state.eventsConfig = await getEventsConfig();
 
-  const dungeonId = await getCurrentDungeonId();
+  const dungeonId = await getCurrentDungeonId(state.playerId);
   const dungeon = dungeonId ? await dungeonRepo.getById(dungeonId) : null;
+  const progress = dungeon ? await getDungeonProgress(state.playerId, dungeon.id) : null;
 
-  if (dungeon && !isDungeonCleared(dungeon)) {
-    await enterDungeon(dungeon);
+  if (dungeon && !isDungeonCleared(dungeon, progress)) {
+    await enterDungeon(dungeon, progress);
   } else {
     await startNewDungeon(dungeon?.id ?? null);
   }

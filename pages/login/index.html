@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Who's Playing?</title>
+  <link rel="stylesheet" href="../../style/theme.css" />
+</head>
+<body>
+  <header class="app-header">
+    <span style="width:1.6rem"></span>
+    <h1>Who's Playing?</h1>
+    <span style="width:1.6rem"></span>
+  </header>
+
+  <main class="app-main">
+    <form id="login-form" class="entity-form">
+      <div class="form-group">
+        <label for="player-name">Enter your name</label>
+        <input type="text" id="player-name" required autocomplete="off" />
+      </div>
+      <p id="login-error" class="form-error"></p>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-block">Continue</button>
+      </div>
+    </form>
+  </main>
+
+  <script type="module" src="login.js"></script>
+</body>
+</html>

@@ -1,6 +1,9 @@
 import { getPlayer, savePlayerName } from '../../services/playerRepository.js';
 import { getLevelingConfig, saveLevelingConfig } from '../../services/levelingConfig.js';
 import { RANK_ORDER } from '../../classes/Rank.js';
+import { requireActivePlayerId } from '../../services/playerSession.js';
+
+const playerId = requireActivePlayerId('../login/index.html');
 
 const form = document.getElementById('entity-form');
 const nameInput = document.getElementById('field-name');
@@ -56,7 +59,7 @@ function readRankRows() {
 }
 
 async function init() {
-  const [player, levelingConfig] = await Promise.all([getPlayer(), getLevelingConfig()]);
+  const [player, levelingConfig] = await Promise.all([getPlayer(playerId), getLevelingConfig()]);
   nameInput.value = player.name;
   renderXpRows(levelingConfig.xpThresholds);
   renderRankRows(levelingConfig.rankThresholds);
@@ -110,12 +113,15 @@ form.addEventListener('submit', async (event) => {
   const submitButton = form.querySelector('button[type="submit"]');
   submitButton.disabled = true;
   try {
-    await Promise.all([savePlayerName(name), saveLevelingConfig({ xpThresholds, rankThresholds })]);
+    await savePlayerName(playerId, name);
+    await saveLevelingConfig({ xpThresholds, rankThresholds });
     window.location.href = 'stats.html';
   } catch (err) {
-    errorEl.textContent = 'Failed to save. Please try again.';
+    errorEl.textContent = err.message || 'Failed to save. Please try again.';
     submitButton.disabled = false;
   }
 });
 
-init();
+if (playerId) {
+  init();
+}
