@@ -1,4 +1,9 @@
-import { getPlayer, savePlayerName } from '../../services/playerRepository.js';
+import {
+  getPlayer,
+  savePlayerName,
+  getIncludeSharedDungeons,
+  setIncludeSharedDungeons,
+} from '../../services/playerRepository.js';
 import { getLevelingConfig, saveLevelingConfig } from '../../services/levelingConfig.js';
 import { RANK_ORDER } from '../../classes/Rank.js';
 import { requireActivePlayerId } from '../../services/playerSession.js';
@@ -7,6 +12,7 @@ const playerId = requireActivePlayerId('../login/index.html');
 
 const form = document.getElementById('entity-form');
 const nameInput = document.getElementById('field-name');
+const includeSharedDungeonsInput = document.getElementById('field-include-shared-dungeons');
 const errorEl = document.getElementById('form-error');
 const xpList = document.getElementById('xp-thresholds');
 const addXpButton = document.getElementById('add-xp-threshold');
@@ -59,8 +65,13 @@ function readRankRows() {
 }
 
 async function init() {
-  const [player, levelingConfig] = await Promise.all([getPlayer(playerId), getLevelingConfig()]);
+  const [player, levelingConfig, includeSharedDungeons] = await Promise.all([
+    getPlayer(playerId),
+    getLevelingConfig(),
+    getIncludeSharedDungeons(playerId),
+  ]);
   nameInput.value = player.name;
+  includeSharedDungeonsInput.checked = includeSharedDungeons;
   renderXpRows(levelingConfig.xpThresholds);
   renderRankRows(levelingConfig.rankThresholds);
 }
@@ -114,7 +125,10 @@ form.addEventListener('submit', async (event) => {
   submitButton.disabled = true;
   try {
     await savePlayerName(playerId, name);
-    await saveLevelingConfig({ xpThresholds, rankThresholds });
+    await Promise.all([
+      saveLevelingConfig({ xpThresholds, rankThresholds }),
+      setIncludeSharedDungeons(playerId, includeSharedDungeonsInput.checked),
+    ]);
     window.location.href = 'stats.html';
   } catch (err) {
     errorEl.textContent = err.message || 'Failed to save. Please try again.';

@@ -165,6 +165,21 @@ export async function setCurrentDungeonId(playerId, dungeonId) {
 }
 
 /**
+ * Whether picking a new random dungeon should also draw from dungeons shared
+ * by other players, not just this player's own. Defaults to true so a fresh
+ * player has content to play even before creating their own dungeons.
+ */
+export async function getIncludeSharedDungeons(playerId) {
+  const snap = await getDoc(playerDoc(playerId));
+  const data = snap.exists() ? snap.data() : {};
+  return data.includeSharedDungeons ?? true;
+}
+
+export async function setIncludeSharedDungeons(playerId, value) {
+  await setDoc(playerDoc(playerId), { includeSharedDungeons: Boolean(value) }, { merge: true });
+}
+
+/**
  * Subtracts a positive amount from the player's gold/energy. The result can
  * go negative (e.g. an energy debt) — no clamping is applied.
  */

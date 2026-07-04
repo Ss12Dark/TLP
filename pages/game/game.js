@@ -4,6 +4,7 @@ import {
   getPlayer,
   getCurrentDungeonId,
   setCurrentDungeonId,
+  getIncludeSharedDungeons,
   recordMonsterSlain,
   recordQuestCompleted,
   recordFastFight,
@@ -42,6 +43,7 @@ const state = {
   slainMonsterIds: new Set(),
   completedQuestIds: new Set(),
   eventsConfig: { dayBonuses: [], doubleEarningsActive: false },
+  includeSharedDungeons: true,
 };
 
 function escapeHtml(value) {
@@ -61,10 +63,25 @@ function isDungeonCleared(dungeon, progress) {
   return monsterIds.every((id) => slain.has(id));
 }
 
-function pickRandomDungeon(dungeons, progressMap, excludeId) {
-  const available = dungeons.filter((d) => d.id !== excludeId);
+/**
+ * A dungeon is visible if it's owned by this player, or (when the player has
+ * opted in) if it's shared — including legacy dungeons with no owner at all,
+ * which are treated as shared since nobody exclusively owns them.
+ */
+function isDungeonVisibleToPlayer(dungeon, playerId, includeShared) {
+  if (dungeon.ownerId === playerId) return true;
+  return includeShared && (Boolean(dungeon.shared) || !dungeon.ownerId);
+}
+
+function isDungeonOwnedByPlayer(dungeon, playerId) {
+  return dungeon.ownerId === playerId;
+}
+
+function pickRandomDungeon(dungeons, progressMap, excludeId, playerId, includeShared) {
+  const visible = dungeons.filter((d) => isDungeonVisibleToPlayer(d, playerId, includeShared));
+  const available = visible.filter((d) => d.id !== excludeId);
   const fresh = available.filter((d) => !isDungeonCleared(d, progressMap[d.id]));
-  const pool = fresh.length > 0 ? fresh : available.length > 0 ? available : dungeons;
+  const pool = fresh.length > 0 ? fresh : available.length > 0 ? available : visible;
   if (pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)];
 }
@@ -92,7 +109,13 @@ async function enterDungeon(dungeon, progress) {
 async function startNewDungeon(excludeId = null) {
   const dungeons = await dungeonRepo.getAll();
   const progressMap = await getAllDungeonProgress(state.playerId);
-  const dungeon = pickRandomDungeon(dungeons, progressMap, excludeId);
+  const dungeon = pickRandomDungeon(
+    dungeons,
+    progressMap,
+    excludeId,
+    state.playerId,
+    state.includeSharedDungeons
+  );
   let progress = dungeon ? progressMap[dungeon.id] : null;
 
   if (dungeon && isDungeonCleared(dungeon, progress)) {
@@ -204,9 +227,14 @@ function render() {
     ${
       dungeon
         ? `
-      <section class="entity-card dungeon-card">
+      <section class="entity-card dungeon-card${isDungeonOwnedByPlayer(dungeon, state.playerId) ? '' : ' dungeon-card--shared'}">
         <div class="card-title">
           <h3>🏰 ${escapeHtml(dungeon.name)}</h3>
+          ${
+            isDungeonOwnedByPlayer(dungeon, state.playerId)
+              ? ''
+              : '<span class="badge badge-shared">🔗 Shared</span>'
+          }
           <button type="button" id="spontaneous-monster-btn" class="btn btn-sm">🎲 Spontaneous Monster</button>
         </div>
         <div id="monster-grid" class="card-grid">
@@ -561,6 +589,7 @@ async function init() {
 
   state.player = await getPlayer(state.playerId);
   state.eventsConfig = await getEventsConfig();
+  state.includeSharedDungeons = await getIncludeSharedDungeons(state.playerId);
 
   const dungeonId = await getCurrentDungeonId(state.playerId);
   const dungeon = dungeonId ? await dungeonRepo.getById(dungeonId) : null;

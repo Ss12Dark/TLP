@@ -1,4 +1,7 @@
 import { Repository } from '../../services/repository.js';
+import { requireActivePlayerId } from '../../services/playerSession.js';
+
+const playerId = requireActivePlayerId('../login/index.html');
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({
@@ -33,6 +36,7 @@ const questRepo = new Repository('quests');
 
 const form = document.getElementById('entity-form');
 const nameInput = document.getElementById('field-name');
+const sharedInput = document.getElementById('field-shared');
 const monsterContainer = document.getElementById('monster-checkboxes');
 const questContainer = document.getElementById('quest-checkboxes');
 const errorEl = document.getElementById('form-error');
@@ -55,6 +59,7 @@ async function init() {
   const selectedQuestIds = new Set(existing?.questIds ?? []);
 
   nameInput.value = existing?.name ?? '';
+  sharedInput.checked = Boolean(existing?.shared);
   renderCheckboxes(monsterContainer, monsters, 'name', 'monsterIds', selectedMonsterIds);
   renderCheckboxes(questContainer, quests, 'title', 'questIds', selectedQuestIds);
 }
@@ -72,6 +77,7 @@ form.addEventListener('submit', async (event) => {
   const formData = new FormData(form);
   const data = {
     name,
+    shared: sharedInput.checked,
     monsterIds: formData.getAll('monsterIds'),
     questIds: formData.getAll('questIds'),
   };
@@ -82,7 +88,7 @@ form.addEventListener('submit', async (event) => {
     if (isEdit) {
       await dungeonRepo.update(id, data);
     } else {
-      await dungeonRepo.add(data);
+      await dungeonRepo.add({ ...data, ownerId: playerId });
     }
     window.location.href = 'list.html';
   } catch (err) {
@@ -91,4 +97,6 @@ form.addEventListener('submit', async (event) => {
   }
 });
 
-init();
+if (playerId) {
+  init();
+}

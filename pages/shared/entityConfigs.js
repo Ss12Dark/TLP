@@ -61,6 +61,7 @@ export const dungeonConfig = {
     return `<div class="badge-row">
       <span class="badge">${monsterCount} monster${monsterCount === 1 ? '' : 's'}</span>
       <span class="badge">${questCount} quest${questCount === 1 ? '' : 's'}</span>
+      <span class="badge">${item.shared ? '🔗 Shared' : '🔒 Private'}</span>
     </div>`;
   },
 };
