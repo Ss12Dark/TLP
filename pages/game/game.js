@@ -113,8 +113,8 @@ function renderPlayer(player) {
       <div class="player-info">
         <h2>${escapeHtml(player.name)}</h2>
         <div class="badge-row">
-          <span class="badge">${escapeHtml(player.rank)}</span>
-          <span class="badge">Lv ${player.level}</span>
+          <span class="badge badge-rank">${escapeHtml(player.rank)}</span>
+          <span class="badge badge-level">Lv ${player.level}</span>
         </div>
       </div>
       <div class="badge-row player-stats">

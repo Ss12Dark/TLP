@@ -562,6 +562,66 @@ a {
   margin-bottom: 0.85rem;
 }
 
+/* ── Play page: dark vibe + colored text ──────────────────────── */
+.game-page {
+  position: relative;
+}
+
+.game-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.65) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.game-page .app-main {
+  position: relative;
+  z-index: 1;
+}
+
+.game-page .game-headline {
+  color: #ffffff;
+  text-shadow: 0 0 14px rgba(155, 93, 229, 0.5), 0 2px 6px var(--shadow);
+}
+
+.game-page .player-info h2 {
+  color: #ffffff;
+}
+
+.badge-rank {
+  color: #d8b8ff;
+  border-color: #9b5de5;
+  background: rgba(74, 30, 110, 0.45);
+}
+
+.badge-level {
+  color: #9be8ae;
+  border-color: #3f8a52;
+  background: rgba(24, 60, 32, 0.45);
+}
+
+.game-page .dungeon-card .card-title h3 {
+  color: #e8c78a;
+}
+
+.game-page .monster-name {
+  color: #ffffff;
+}
+
+.game-page .quest-info strong {
+  color: #d9a066;
+}
+
+.game-page .day-banner strong {
+  color: #9be8ae;
+}
+
+.game-page .done-mark {
+  color: #8fe6a0;
+}
+
 /* ── Earn popup ───────────────────────────────────────────────── */
 .earn-popup {
   position: fixed;
