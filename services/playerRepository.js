@@ -9,7 +9,9 @@ import { db } from '../firebase-init.js';
 import { Player } from '../classes/Player.js';
 import { PlayerStatistics } from '../classes/PlayerStatistics.js';
 import { HistoryEntryType, buildEditLink } from '../classes/HistoryEntryType.js';
+import { Rank } from '../classes/Rank.js';
 import { getLevelingConfig, computeLevelForXp, computeRankForLevel } from './levelingConfig.js';
+import { getEventsConfig, computeEarningsMultiplier } from './eventsConfig.js';
 
 const PLAYER_DOC = doc(db, 'players', 'main');
 const STATISTICS_DOC = doc(db, 'playerStatistics', 'main');
@@ -17,31 +19,56 @@ const STATISTICS_DOC = doc(db, 'playerStatistics', 'main');
 /**
  * Applies gold/energy (plain increments) and xp (read-modify-write, since a
  * new level/rank has to be derived from the resulting total) to the player
- * doc. Only touches `level`/`rank` when the corresponding thresholds are
- * configured, so an unconfigured leveling system is a no-op on those fields.
+ * doc, after scaling the raw amounts by the current day-bonus/double-earnings
+ * multipliers. Only touches `level`/`rank` when leveling thresholds are
+ * configured. Returns the actually-applied (post-multiplier) amounts, plus
+ * `leveledUpTo`/`rankedUpTo` (the new level/rank, or null if unchanged) so
+ * callers can log accurate statistics/history and show level/rank-up popups.
  */
 async function applyRewards({ xp = 0, gold = 0, energy = 0 }) {
+  const eventsConfig = await getEventsConfig();
+  const multiplier = computeEarningsMultiplier(eventsConfig);
+  const finalXp = xp * multiplier.xp;
+  const finalGold = Math.round(gold * multiplier.gold);
+  const finalEnergy = Math.round(energy * multiplier.energy);
+
   const updates = {
-    gold: increment(gold),
-    energy: increment(energy),
+    gold: increment(finalGold),
+    energy: increment(finalEnergy),
   };
 
-  if (xp !== 0) {
+  let leveledUpTo = null;
+  let rankedUpTo = null;
+
+  if (finalXp !== 0) {
     const [snap, levelingConfig] = await Promise.all([getDoc(PLAYER_DOC), getLevelingConfig()]);
-    const currentXp = snap.exists() ? snap.data().xp ?? 0 : 0;
-    const newXp = currentXp + xp;
+    const data = snap.exists() ? snap.data() : {};
+    const currentXp = data.xp ?? 0;
+    const currentLevel = data.level ?? 1;
+    const currentRank = data.rank ?? Rank.BEGINNER;
+    const newXp = currentXp + finalXp;
     updates.xp = newXp;
 
     if (levelingConfig.xpThresholds.length > 0) {
       const newLevel = computeLevelForXp(newXp, levelingConfig.xpThresholds);
       updates.level = newLevel;
+      if (newLevel > currentLevel) {
+        leveledUpTo = newLevel;
+      }
+
       if (levelingConfig.rankThresholds.length > 0) {
-        updates.rank = computeRankForLevel(newLevel, levelingConfig.rankThresholds);
+        const newRank = computeRankForLevel(newLevel, levelingConfig.rankThresholds);
+        updates.rank = newRank;
+        if (newRank !== currentRank) {
+          rankedUpTo = newRank;
+        }
       }
     }
   }
 
   await setDoc(PLAYER_DOC, updates, { merge: true });
+
+  return { xp: finalXp, gold: finalGold, energy: finalEnergy, leveledUpTo, rankedUpTo };
 }
 
 export async function getPlayer() {
@@ -113,6 +140,8 @@ export async function recordMonsterSlain(monster) {
   const rewardGold = monster.gold_to_give_when_defeated ?? 0;
   const rewardEnergy = monster.energy_to_give_when_defeated ?? 0;
 
+  const applied = await applyRewards({ xp: rewardXp, gold: rewardGold, energy: rewardEnergy });
+
   const entry = {
     type: HistoryEntryType.MONSTER,
     id: monster.id,
@@ -122,7 +151,7 @@ export async function recordMonsterSlain(monster) {
   };
 
   const statsUpdates = {
-    total_xp_gained: increment(rewardXp),
+    total_xp_gained: increment(applied.xp),
     monster_defeated: increment(1),
     history: arrayUnion(entry),
   };
@@ -130,10 +159,8 @@ export async function recordMonsterSlain(monster) {
     statsUpdates.elite_defeated = increment(1);
   }
 
-  await Promise.all([
-    applyRewards({ xp: rewardXp, gold: rewardGold, energy: rewardEnergy }),
-    setDoc(STATISTICS_DOC, statsUpdates, { merge: true }),
-  ]);
+  await setDoc(STATISTICS_DOC, statsUpdates, { merge: true });
+  return applied;
 }
 
 /**
@@ -147,6 +174,8 @@ export async function recordQuestCompleted(quest) {
   const rewardGold = quest.gold_to_give_when_defeated ?? 0;
   const rewardEnergy = quest.energy_to_give_when_defeated ?? 0;
 
+  const applied = await applyRewards({ xp: rewardXp, gold: rewardGold, energy: rewardEnergy });
+
   const entry = {
     type: HistoryEntryType.QUEST,
     id: quest.id,
@@ -155,16 +184,46 @@ export async function recordQuestCompleted(quest) {
     defeatedAt: new Date().toISOString(),
   };
 
-  await Promise.all([
-    applyRewards({ xp: rewardXp, gold: rewardGold, energy: rewardEnergy }),
-    setDoc(
-      STATISTICS_DOC,
-      {
-        total_xp_gained: increment(rewardXp),
-        objective_claimed: increment(1),
-        history: arrayUnion(entry),
-      },
-      { merge: true }
-    ),
-  ]);
+  await setDoc(
+    STATISTICS_DOC,
+    {
+      total_xp_gained: increment(applied.xp),
+      objective_claimed: increment(1),
+      history: arrayUnion(entry),
+    },
+    { merge: true }
+  );
+  return applied;
+}
+
+/**
+ * Applies the configured Fast Fight reward (gold/xp/energy) to the player
+ * doc, and logs a history entry linking back to the Events page where its
+ * reward amounts can be reconfigured.
+ * @param {{xp?: number, gold?: number, energy?: number}} fastFightConfig
+ */
+export async function recordFastFight(fastFightConfig) {
+  const rewardXp = fastFightConfig.xp ?? 0;
+  const rewardGold = fastFightConfig.gold ?? 0;
+  const rewardEnergy = fastFightConfig.energy ?? 0;
+
+  const applied = await applyRewards({ xp: rewardXp, gold: rewardGold, energy: rewardEnergy });
+
+  const entry = {
+    type: HistoryEntryType.FAST_FIGHT,
+    id: 'fastFight',
+    name: 'Fast Fight',
+    link: buildEditLink(HistoryEntryType.FAST_FIGHT, 'fastFight'),
+    defeatedAt: new Date().toISOString(),
+  };
+
+  await setDoc(
+    STATISTICS_DOC,
+    {
+      total_xp_gained: increment(applied.xp),
+      history: arrayUnion(entry),
+    },
+    { merge: true }
+  );
+  return applied;
 }

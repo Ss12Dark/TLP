@@ -216,9 +216,15 @@ a {
 
 .entity-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border-style: solid;
+  border-width: 20px;
+  border-image-source: url('../imgs/div_background.png');
+  border-image-slice: 40 fill;
+  border-image-width: 20px;
+  border-image-outset: 0;
+  border-image-repeat: round;
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: 0.75rem;
   box-shadow: 0 3px 8px var(--shadow);
   display: flex;
   flex-direction: column;
@@ -274,6 +280,19 @@ a {
 
 .badge-button:active {
   transform: scale(0.95);
+}
+
+.badge-event {
+  background: var(--accent-dark);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.stat-icon {
+  width: 0.95em;
+  height: 0.95em;
+  vertical-align: -0.15em;
+  object-fit: contain;
 }
 
 .badge-row {
@@ -391,6 +410,7 @@ a {
 
 .dynamic-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
   background: var(--bg);
@@ -408,7 +428,7 @@ a {
 
 .dynamic-row input,
 .dynamic-row select {
-  flex: 1;
+  flex: 1 1 5.5rem;
   font-family: var(--font-body);
   font-size: 0.9rem;
   background: var(--surface);
@@ -485,9 +505,15 @@ a {
   gap: 0.9rem;
   flex-wrap: wrap;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border-style: solid;
+  border-width: 20px;
+  border-image-source: url('../imgs/div_background.png');
+  border-image-slice: 40 fill;
+  border-image-width: 20px;
+  border-image-outset: 0;
+  border-image-repeat: round;
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: 0.75rem;
   box-shadow: 0 3px 8px var(--shadow);
   margin-bottom: 0.85rem;
 }
@@ -517,6 +543,172 @@ a {
   margin: 0 0 1rem;
 }
 
+.day-banner p {
+  margin: 0 0 0.4rem;
+}
+
+.day-banner-badges {
+  justify-content: center;
+}
+
+.fast-fight-btn {
+  margin-bottom: 0.85rem;
+}
+
+/* ── Earn popup ───────────────────────────────────────────────── */
+.earn-popup {
+  position: fixed;
+  top: 5rem;
+  left: 50%;
+  z-index: 200;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+  color: #1a1207;
+  font-weight: 700;
+  font-size: 1rem;
+  white-space: nowrap;
+  padding: 0.7rem 1.4rem;
+  border-radius: 999px;
+  box-shadow: 0 6px 20px var(--shadow);
+  pointer-events: none;
+  animation: earn-popup-in-out 2s ease forwards;
+}
+
+.earn-popup-text {
+  position: relative;
+}
+
+.earn-popup-shine {
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  transform: skewX(-20deg);
+  animation: earn-popup-shine 1s ease 0.2s;
+}
+
+@keyframes earn-popup-shine {
+  0% {
+    left: -60%;
+  }
+  100% {
+    left: 130%;
+  }
+}
+
+@keyframes earn-popup-in-out {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px) scale(0.9);
+  }
+  10% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  85% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px) scale(0.95);
+  }
+}
+
+/* ── Achievement popups (level up / rank up / dungeon cleared) ───────── */
+.achievement-popup {
+  position: fixed;
+  top: calc(38% + (var(--stack-index, 0) * 5rem));
+  left: 50%;
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  overflow: hidden;
+  padding: 1rem 1.6rem;
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+  box-shadow: 0 10px 30px var(--shadow);
+  pointer-events: none;
+  animation: achievement-popup-in-out 2s ease forwards;
+}
+
+.achievement-popup-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.achievement-popup-text {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.achievement-popup-text strong {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  letter-spacing: 0.03em;
+}
+
+.achievement-popup-text span {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.achievement-popup-shine {
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+  transform: skewX(-20deg);
+  animation: earn-popup-shine 1.1s ease 0.2s;
+}
+
+.achievement-popup--level {
+  background: linear-gradient(135deg, #6e4a12, #f0c24b);
+  border-color: #ffe08a;
+  color: #2a1c05;
+}
+
+.achievement-popup--rank {
+  background: linear-gradient(135deg, #3a1f52, #9b5de5);
+  border-color: #c9a3ff;
+  color: #f4ecff;
+}
+
+.achievement-popup--dungeon {
+  background: linear-gradient(135deg, #1f4a2e, #4caf6e);
+  border-color: #9be8ae;
+  color: #ecfff2;
+}
+
+@keyframes achievement-popup-in-out {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px) scale(0.85);
+  }
+  12% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1.05);
+  }
+  20% {
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  85% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px) scale(0.9);
+  }
+}
+
 .dungeon-card .card-title h3 {
   font-size: 1.3rem;
 }
@@ -528,12 +720,18 @@ a {
   flex-direction: column;
   gap: 0.4rem;
   background: var(--surface-alt);
-  border: 1px solid var(--border-light);
+  border-style: solid;
+  border-width: 20px;
+  border-image-source: url('../imgs/monster_card.png');
+  border-image-slice: 40 fill;
+  border-image-width: 20px;
+  border-image-outset: 0;
+  border-image-repeat: round;
   border-radius: var(--radius);
-  padding: 0.9rem;
+  padding: 0.6rem;
   color: var(--text);
   cursor: pointer;
-  transition: border-color 0.15s ease, transform 0.1s ease;
+  transition: transform 0.1s ease;
 }
 
 .monster-card:hover:not(:disabled) {
@@ -633,9 +831,15 @@ a {
 
 .dialog-box {
   background: var(--surface);
-  border: 1px solid var(--border-light);
+  border-style: solid;
+  border-width: 18px;
+  border-image-source: url('../imgs/div_background.png');
+  border-image-slice: 40 fill;
+  border-image-width: 18px;
+  border-image-outset: 0;
+  border-image-repeat: round;
   border-radius: var(--radius);
-  padding: 1.25rem;
+  padding: 1.1rem;
   max-width: 320px;
   width: 100%;
   max-height: 90vh;

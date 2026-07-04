@@ -2,12 +2,14 @@ export const HistoryEntryType = Object.freeze({
   MONSTER: 'monster',
   QUEST: 'quest',
   DUNGEON: 'dungeon',
+  FAST_FIGHT: 'fastFight',
 });
 
 const EDIT_PATH_BY_TYPE = Object.freeze({
   [HistoryEntryType.MONSTER]: 'pages/monsters/form.html',
   [HistoryEntryType.QUEST]: 'pages/quests/form.html',
   [HistoryEntryType.DUNGEON]: 'pages/dungeons/form.html',
+  [HistoryEntryType.FAST_FIGHT]: 'pages/events/index.html',
 });
 
 export function isValidHistoryEntryType(value) {
